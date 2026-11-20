@@ -1,0 +1,60 @@
+<div class="cabecalho">
+  <div>
+    <h1>Eventos</h1>
+    <p class="subtitulo">Busque por nome e data ou abra um evento para ver os participantes.</p>
+  </div>
+  @if (auth.isAdmin()) {
+    <a class="btn btn-primario" routerLink="/eventos/novo">+ Novo evento</a>
+  }
+</div>
+
+<form [formGroup]="filtros" (ngSubmit)="buscar()" class="cartao filtros" role="search" aria-label="Buscar eventos">
+  <div class="campo">
+    <label for="filtro-nome">Nome do evento</label>
+    <input id="filtro-nome" formControlName="nome" placeholder="Ex.: Oficina" maxlength="120">
+  </div>
+  <div class="campo">
+    <label for="filtro-data">Data</label>
+    <input id="filtro-data" type="date" formControlName="data">
+  </div>
+  <div class="acoes">
+    <button type="submit" class="btn btn-primario" [disabled]="carregando()">Buscar</button>
+    <button type="button" class="btn btn-secundario" (click)="limpar()" [disabled]="carregando()">Limpar</button>
+  </div>
+</form>
+
+<section class="cartao">
+  @if (carregando()) {
+    <p class="estado" role="status">Buscando eventos…</p>
+  } @else if (erro()) {
+    <div class="estado estado-erro" role="alert">
+      <p>{{ erro() }}</p>
+      <button type="button" class="btn btn-secundario btn-pequeno" (click)="buscar()">Tentar novamente</button>
+    </div>
+  } @else {
+    <p class="resultado" aria-live="polite">
+      {{ eventos().length }} {{ eventos().length === 1 ? 'evento encontrado' : 'eventos encontrados' }}
+      {{ filtrando() ? 'com os filtros informados' : '' }}
+    </p>
+    <ul class="lista-eventos">
+      @for (evento of eventos(); track evento.id) {
+        <li>
+          <time class="data-bloco" [attr.datetime]="evento.data">
+            <strong>{{ evento.data | date: 'dd' }}</strong>
+            <span>{{ evento.data | date: 'MMM' }}</span>
+          </time>
+          <div class="evento-info">
+            <strong>{{ evento.nome }}</strong>
+            <span class="texto-secundario">{{ evento.local }} · {{ evento.data | date: 'EEEE, dd/MM/yyyy' }}</span>
+          </div>
+          <span class="selo" [class.selo-alerta]="lotado(evento)">
+            {{ lotado(evento) ? 'Lotado' : evento.inscritos + ' de ' + evento.vagas + ' vagas' }}
+          </span>
+          <a class="btn btn-link" [routerLink]="['/eventos', evento.id, 'participantes']">Ver participantes →</a>
+        </li>
+      } @empty {
+        <li class="vazio">Nenhum evento encontrado. Tente outro nome ou outra data.</li>
+      }
+    </ul>
+  }
+</section>

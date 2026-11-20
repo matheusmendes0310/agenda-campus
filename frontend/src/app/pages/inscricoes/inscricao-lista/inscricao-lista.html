@@ -1,0 +1,71 @@
+<div class="cabecalho">
+  <div>
+    <h1>Inscrições</h1>
+    <p class="subtitulo">Participantes inscritos nos eventos acadêmicos.</p>
+  </div>
+  @if (auth.isAdmin()) {
+    <a class="btn btn-primario" routerLink="/inscricoes/nova">+ Nova inscrição</a>
+  }
+</div>
+
+<section class="cartao">
+  @if (carregando()) {
+    <p class="estado" role="status">Carregando inscrições…</p>
+  } @else if (erro()) {
+    <div class="estado estado-erro" role="alert">
+      <p>{{ erro() }}</p>
+      <button type="button" class="btn btn-secundario btn-pequeno" (click)="carregar()">Tentar novamente</button>
+    </div>
+  } @else {
+    <div class="tabela-rolagem">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th scope="col">Participante</th>
+            <th scope="col">Evento</th>
+            <th scope="col">Data do evento</th>
+            <th scope="col" class="col-acoes">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of inscricoes(); track item.id) {
+            <tr>
+              <td>
+                <strong>{{ item.participanteNome }}</strong>
+                <span class="texto-secundario">{{ item.participanteEmail }}</span>
+              </td>
+              <td>{{ item.eventoNome }}</td>
+              <td>{{ item.eventoData | date: 'dd/MM/yyyy' }}</td>
+              <td class="col-acoes">
+                <div class="acoes-tabela">
+                  <a [routerLink]="['/inscricoes', item.id]" class="btn btn-link">Detalhes</a>
+                  @if (auth.isAdmin()) {
+                    <a [routerLink]="['/inscricoes', item.id, 'editar']" class="btn btn-link">Editar</a>
+                    <button type="button" class="btn btn-link btn-link-perigo" (click)="paraExcluir.set(item)">Excluir</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="vazio">
+                Nenhuma inscrição cadastrada ainda.
+                @if (auth.isAdmin()) { <a routerLink="/inscricoes/nova">Criar a primeira</a> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+@if (paraExcluir(); as item) {
+  <app-confirmacao
+    titulo="Excluir inscrição?"
+    [mensagem]="item.participanteNome + ' será removido(a) do evento ' + item.eventoNome + '. Essa ação não pode ser desfeita.'"
+    textoConfirmar="Sim, excluir"
+    [carregando]="excluindo()"
+    (confirmar)="excluir()"
+    (cancelar)="fecharConfirmacao()" />
+}

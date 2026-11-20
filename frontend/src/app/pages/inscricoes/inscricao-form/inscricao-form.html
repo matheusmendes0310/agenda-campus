@@ -1,0 +1,58 @@
+<a class="voltar" [routerLink]="editando ? ['/inscricoes', id()] : ['/inscricoes']">← Voltar</a>
+
+<div class="cabecalho">
+  <div>
+    <h1>{{ editando ? 'Editar inscrição' : 'Nova inscrição' }}</h1>
+    <p class="subtitulo">Escolha o evento e o participante. As opções vêm da API.</p>
+  </div>
+</div>
+
+@if (carregando()) {
+  <p class="estado" role="status">Carregando opções…</p>
+} @else if (erroCarregamento()) {
+  <div class="alerta alerta-erro" role="alert">{{ erroCarregamento() }}</div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="salvar()" class="cartao formulario" novalidate>
+    @if (eventos().length === 0 || participantes().length === 0) {
+      <p class="alerta alerta-info">
+        É preciso ter pelo menos um evento e um participante cadastrados.
+        <a routerLink="/eventos/novo">Novo evento</a> · <a routerLink="/participantes/novo">Novo participante</a>
+      </p>
+    }
+
+    <div class="campo">
+      <label for="evento">Evento <span class="obrigatorio" aria-hidden="true">*</span></label>
+      <select id="evento" formControlName="eventoId" [class.invalido]="campoInvalido('eventoId')"
+              [attr.aria-invalid]="campoInvalido('eventoId')">
+        <option [ngValue]="null" disabled>Selecione um evento</option>
+        @for (evento of eventos(); track evento.id) {
+          <option [ngValue]="evento.id" [disabled]="eventoIndisponivel(evento)">
+            {{ evento.nome }} — {{ evento.data | date: 'dd/MM/yyyy' }} ({{ evento.inscritos }}/{{ evento.vagas }} vagas{{ lotado(evento) ? ', lotado' : '' }})
+          </option>
+        }
+      </select>
+      @if (campoInvalido('eventoId')) { <span class="erro-campo">Selecione um evento.</span> }
+    </div>
+
+    <div class="campo">
+      <label for="participante">Participante <span class="obrigatorio" aria-hidden="true">*</span></label>
+      <select id="participante" formControlName="participanteId" [class.invalido]="campoInvalido('participanteId')"
+              [attr.aria-invalid]="campoInvalido('participanteId')">
+        <option [ngValue]="null" disabled>Selecione um participante</option>
+        @for (pessoa of participantes(); track pessoa.id) {
+          <option [ngValue]="pessoa.id">{{ pessoa.nome }} ({{ pessoa.email }})</option>
+        }
+      </select>
+      @if (campoInvalido('participanteId')) { <span class="erro-campo">Selecione um participante.</span> }
+    </div>
+
+    @if (erro()) { <p class="alerta alerta-erro" role="alert">{{ erro() }}</p> }
+
+    <div class="acoes">
+      <button type="submit" class="btn btn-primario" [disabled]="salvando()">
+        {{ salvando() ? 'Salvando…' : (editando ? 'Salvar alterações' : 'Cadastrar inscrição') }}
+      </button>
+      <a class="btn btn-secundario" [routerLink]="editando ? ['/inscricoes', id()] : ['/inscricoes']">Cancelar</a>
+    </div>
+  </form>
+}

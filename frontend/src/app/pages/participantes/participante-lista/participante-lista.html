@@ -1,0 +1,30 @@
+<div class="cabecalho">
+  <div>
+    <h1>Participantes</h1>
+    <p class="subtitulo">Pessoas que podem ser inscritas nos eventos.</p>
+  </div>
+  @if (auth.isAdmin()) {
+    <a class="btn btn-primario" routerLink="/participantes/novo">+ Novo participante</a>
+  }
+</div>
+
+<section class="cartao">
+  @if (carregando()) {
+    <p class="estado" role="status">Carregando participantes…</p>
+  } @else if (erro()) {
+    <div class="estado estado-erro" role="alert"><p>{{ erro() }}</p></div>
+  } @else {
+    <div class="tabela-rolagem">
+      <table class="tabela">
+        <thead><tr><th scope="col">Nome</th><th scope="col">E-mail</th></tr></thead>
+        <tbody>
+          @for (pessoa of participantes(); track pessoa.id) {
+            <tr><td><strong>{{ pessoa.nome }}</strong></td><td>{{ pessoa.email }}</td></tr>
+          } @empty {
+            <tr><td colspan="2" class="vazio">Nenhum participante cadastrado.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

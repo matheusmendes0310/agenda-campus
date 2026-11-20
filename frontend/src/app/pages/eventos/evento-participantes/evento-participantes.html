@@ -1,0 +1,44 @@
+<a class="voltar" routerLink="/eventos">← Voltar para eventos</a>
+
+@if (erro()) {
+  <div class="alerta alerta-erro" role="alert">{{ erro() }}</div>
+} @else if (evento(); as item) {
+  <div class="cabecalho">
+    <div>
+      <span class="sobretitulo">Participantes do evento</span>
+      <h1>{{ item.nome }}</h1>
+      <p class="subtitulo">{{ item.data | date: 'dd/MM/yyyy' }} · {{ item.local }} · {{ item.inscritos }} de {{ item.vagas }} vagas preenchidas</p>
+    </div>
+    @if (auth.isAdmin() && item.inscritos < item.vagas) {
+      <a class="btn btn-primario" routerLink="/inscricoes/nova" [queryParams]="{ eventoId: item.id }">+ Inscrever participante</a>
+    }
+  </div>
+
+  <div class="barra-vagas" role="progressbar" [attr.aria-valuenow]="item.inscritos" aria-valuemin="0"
+       [attr.aria-valuemax]="item.vagas" [attr.aria-label]="'Vagas preenchidas: ' + item.inscritos + ' de ' + item.vagas">
+    <span [style.width.%]="(item.inscritos / item.vagas) * 100"></span>
+  </div>
+
+  <section class="cartao">
+    <div class="tabela-rolagem">
+      <table class="tabela">
+        <thead>
+          <tr><th scope="col" class="col-numero">#</th><th scope="col">Nome</th><th scope="col">E-mail</th></tr>
+        </thead>
+        <tbody>
+          @for (pessoa of participantes(); track pessoa.id; let i = $index) {
+            <tr>
+              <td class="texto-secundario">{{ i + 1 }}</td>
+              <td><strong>{{ pessoa.nome }}</strong></td>
+              <td>{{ pessoa.email }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="3" class="vazio">Ninguém se inscreveu neste evento ainda.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else {
+  <p class="estado" role="status">Carregando evento e participantes…</p>
+}

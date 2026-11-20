@@ -1,0 +1,49 @@
+<a class="voltar" routerLink="/eventos">← Voltar para eventos</a>
+
+<div class="cabecalho">
+  <div>
+    <h1>Novo evento</h1>
+    <p class="subtitulo">Campos com * são obrigatórios.</p>
+  </div>
+</div>
+
+<form [formGroup]="form" (ngSubmit)="salvar()" class="cartao formulario" novalidate>
+  <div class="campo">
+    <label for="nome">Nome <span class="obrigatorio" aria-hidden="true">*</span></label>
+    <input id="nome" formControlName="nome" maxlength="120" placeholder="Ex.: Oficina de Angular"
+           [class.invalido]="campoInvalido('nome')" [attr.aria-invalid]="campoInvalido('nome')">
+    @if (campoInvalido('nome')) { <span class="erro-campo">Informe o nome do evento.</span> }
+  </div>
+
+  <div class="grade-2 grade-campos">
+    <div class="campo">
+      <label for="data">Data <span class="obrigatorio" aria-hidden="true">*</span></label>
+      <input id="data" type="date" formControlName="data" [min]="hoje"
+             [class.invalido]="campoInvalido('data')" [attr.aria-invalid]="campoInvalido('data')">
+      @if (campoInvalido('data')) { <span class="erro-campo">Informe a data do evento.</span> }
+    </div>
+
+    <div class="campo">
+      <label for="vagas">Vagas <span class="obrigatorio" aria-hidden="true">*</span></label>
+      <input id="vagas" type="number" min="1" formControlName="vagas"
+             [class.invalido]="campoInvalido('vagas')" [attr.aria-invalid]="campoInvalido('vagas')">
+      @if (campoInvalido('vagas')) { <span class="erro-campo">Informe pelo menos 1 vaga.</span> }
+    </div>
+  </div>
+
+  <div class="campo">
+    <label for="local">Local <span class="obrigatorio" aria-hidden="true">*</span></label>
+    <input id="local" formControlName="local" maxlength="120" placeholder="Ex.: Laboratório 02"
+           [class.invalido]="campoInvalido('local')" [attr.aria-invalid]="campoInvalido('local')">
+    @if (campoInvalido('local')) { <span class="erro-campo">Informe o local do evento.</span> }
+  </div>
+
+  @if (erro()) { <p class="alerta alerta-erro" role="alert">{{ erro() }}</p> }
+
+  <div class="acoes">
+    <button type="submit" class="btn btn-primario" [disabled]="salvando()">
+      {{ salvando() ? 'Salvando…' : 'Cadastrar evento' }}
+    </button>
+    <a class="btn btn-secundario" routerLink="/eventos">Cancelar</a>
+  </div>
+</form>

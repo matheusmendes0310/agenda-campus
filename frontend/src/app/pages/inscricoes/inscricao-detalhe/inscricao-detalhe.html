@@ -1,0 +1,53 @@
+<a class="voltar" routerLink="/inscricoes">← Voltar para inscrições</a>
+
+@if (erro()) {
+  <div class="alerta alerta-erro" role="alert">{{ erro() }}</div>
+} @else if (inscricao(); as item) {
+  <div class="cabecalho">
+    <div>
+      <span class="sobretitulo">Inscrição nº {{ item.id }}</span>
+      <h1>{{ item.participanteNome }}</h1>
+      <p class="subtitulo">Inscrito(a) em {{ item.dataInscricao | date: "dd/MM/yyyy 'às' HH:mm" }}</p>
+    </div>
+    @if (auth.isAdmin()) {
+      <div class="acoes">
+        <a class="btn btn-secundario" [routerLink]="['/inscricoes', item.id, 'editar']">Editar</a>
+        <button type="button" class="btn btn-perigo-contorno" (click)="confirmando.set(true)">Excluir</button>
+      </div>
+    }
+  </div>
+
+  <div class="grade-2">
+    <section class="cartao">
+      <h2 class="cartao-titulo">Participante</h2>
+      <dl class="ficha">
+        <div><dt>Nome</dt><dd>{{ item.participanteNome }}</dd></div>
+        <div><dt>E-mail</dt><dd>{{ item.participanteEmail }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="cartao">
+      <h2 class="cartao-titulo">Evento</h2>
+      <dl class="ficha">
+        <div><dt>Nome</dt><dd>{{ item.eventoNome }}</dd></div>
+        <div><dt>Data</dt><dd>{{ item.eventoData | date: 'dd/MM/yyyy' }}</dd></div>
+        <div><dt>Local</dt><dd>{{ item.eventoLocal }}</dd></div>
+      </dl>
+      <div class="cartao-rodape">
+        <a [routerLink]="['/eventos', item.eventoId, 'participantes']">Ver todos os participantes deste evento →</a>
+      </div>
+    </section>
+  </div>
+
+  @if (confirmando()) {
+    <app-confirmacao
+      titulo="Excluir inscrição?"
+      [mensagem]="item.participanteNome + ' será removido(a) do evento ' + item.eventoNome + '. Essa ação não pode ser desfeita.'"
+      textoConfirmar="Sim, excluir"
+      [carregando]="excluindo()"
+      (confirmar)="excluir()"
+      (cancelar)="confirmando.set(false)" />
+  }
+} @else {
+  <p class="estado" role="status">Carregando inscrição…</p>
+}

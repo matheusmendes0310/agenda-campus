@@ -1,0 +1,38 @@
+<a class="voltar" routerLink="/participantes">← Voltar para participantes</a>
+
+<div class="cabecalho">
+  <div>
+    <h1>Novo participante</h1>
+    <p class="subtitulo">Campos com * são obrigatórios.</p>
+  </div>
+</div>
+
+<form [formGroup]="form" (ngSubmit)="salvar()" class="cartao formulario" novalidate>
+  <div class="campo">
+    <label for="nome">Nome <span class="obrigatorio" aria-hidden="true">*</span></label>
+    <input id="nome" formControlName="nome" maxlength="120" autocomplete="name"
+           [class.invalido]="campoInvalido('nome')" [attr.aria-invalid]="campoInvalido('nome')">
+    @if (campoInvalido('nome')) { <span class="erro-campo">Informe o nome.</span> }
+  </div>
+
+  <div class="campo">
+    <label for="email">E-mail <span class="obrigatorio" aria-hidden="true">*</span></label>
+    <input id="email" type="email" formControlName="email" maxlength="150" autocomplete="email"
+           placeholder="nome@email.com"
+           [class.invalido]="campoInvalido('email')" [attr.aria-invalid]="campoInvalido('email')">
+    @if (campoInvalido('email')) {
+      <span class="erro-campo">
+        {{ form.controls.email.hasError('required') ? 'Informe o e-mail.' : 'Informe um e-mail válido.' }}
+      </span>
+    }
+  </div>
+
+  @if (erro()) { <p class="alerta alerta-erro" role="alert">{{ erro() }}</p> }
+
+  <div class="acoes">
+    <button type="submit" class="btn btn-primario" [disabled]="salvando()">
+      {{ salvando() ? 'Salvando…' : 'Cadastrar participante' }}
+    </button>
+    <a class="btn btn-secundario" routerLink="/participantes">Cancelar</a>
+  </div>
+</form>

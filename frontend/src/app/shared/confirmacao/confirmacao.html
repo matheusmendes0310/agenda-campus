@@ -1,0 +1,15 @@
+<div class="modal-fundo" (click)="cancelar.emit()" (keydown.escape)="cancelar.emit()">
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modal-titulo" aria-describedby="modal-texto"
+       (click)="$event.stopPropagation()">
+    <h2 id="modal-titulo">{{ titulo() }}</h2>
+    <p id="modal-texto">{{ mensagem() }}</p>
+    <div class="acoes acoes-direita">
+      <button type="button" class="btn btn-secundario" (click)="cancelar.emit()" [disabled]="carregando()" autofocus>
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-perigo" (click)="confirmar.emit()" [disabled]="carregando()">
+        {{ carregando() ? 'Excluindo…' : textoConfirmar() }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,37 @@
+<div class="login">
+  <aside class="login-lateral">
+    <span class="marca marca-clara"><span class="marca-icone" aria-hidden="true"></span>Agenda Campus</span>
+    <div>
+      <h2 class="login-chamada">Inscrições em eventos acadêmicos, em um só lugar.</h2>
+      <p>Organize oficinas, palestras e semanas acadêmicas e acompanhe quem vai participar.</p>
+    </div>
+    <small>UNIPAR · Análise e Desenvolvimento de Sistemas</small>
+  </aside>
+
+  <section class="login-area">
+    <form [formGroup]="form" (ngSubmit)="entrar()" class="login-form" novalidate>
+      <h1>Entrar</h1>
+      <p class="subtitulo">Use sua conta de administrador ou de usuário comum.</p>
+
+      <div class="campo">
+        <label for="login">Usuário</label>
+        <input id="login" formControlName="login" autocomplete="username"
+               [class.invalido]="campoInvalido('login')" [attr.aria-invalid]="campoInvalido('login')">
+        @if (campoInvalido('login')) { <span class="erro-campo">Informe o usuário.</span> }
+      </div>
+
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" formControlName="senha" autocomplete="current-password"
+               [class.invalido]="campoInvalido('senha')" [attr.aria-invalid]="campoInvalido('senha')">
+        @if (campoInvalido('senha')) { <span class="erro-campo">Informe a senha.</span> }
+      </div>
+
+      @if (erro()) { <p class="alerta alerta-erro" role="alert">{{ erro() }}</p> }
+
+      <button type="submit" class="btn btn-primario btn-bloco" [disabled]="enviando()">
+        {{ enviando() ? 'Entrando…' : 'Entrar' }}
+      </button>
+    </form>
+  </section>
+</div>

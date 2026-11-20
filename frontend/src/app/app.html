@@ -1,0 +1,36 @@
+@if (auth.usuario(); as usuario) {
+  <header class="topo">
+    <div class="topo-conteudo">
+      <a routerLink="/inscricoes" class="marca">
+        <span class="marca-icone" aria-hidden="true"></span>
+        Agenda Campus
+      </a>
+
+      <nav class="menu" aria-label="Menu principal">
+        <a routerLink="/inscricoes" routerLinkActive="ativo">Inscrições</a>
+        <a routerLink="/eventos" routerLinkActive="ativo">Eventos</a>
+        <a routerLink="/participantes" routerLinkActive="ativo">Participantes</a>
+      </nav>
+
+      <div class="conta">
+        <span class="conta-nome">
+          {{ usuario.login }}
+          <span class="selo" [class.selo-admin]="usuario.perfil === 'ADMIN'">
+            {{ usuario.perfil === 'ADMIN' ? 'Administrador' : 'Comum' }}
+          </span>
+        </span>
+        <button type="button" class="btn btn-secundario btn-pequeno" (click)="sair()">Sair</button>
+      </div>
+    </div>
+  </header>
+}
+
+<main [class.conteudo]="auth.usuario()">
+  @if (mensagens.mensagem(); as msg) {
+    <div class="alerta alerta-{{ msg.tipo }} alerta-global" [attr.role]="msg.tipo === 'erro' ? 'alert' : 'status'">
+      <span>{{ msg.texto }}</span>
+      <button type="button" class="alerta-fechar" (click)="mensagens.fechar()" aria-label="Fechar mensagem">×</button>
+    </div>
+  }
+  <router-outlet />
+</main>
