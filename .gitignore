@@ -1,0 +1,10 @@
+node_modules/
+.angular/
+dist/
+target/
+backend/data/
+.claude/
+.env
+*.log
+*.zip
+*.mp4
