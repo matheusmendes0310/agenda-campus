@@ -1,5 +1,6 @@
 name: Verificação de integração
 on:
+  workflow_dispatch:
   push:
     branches: [verificacao-integracao]
 permissions:
@@ -110,7 +111,7 @@ jobs:
               await page.locator('.modal-ux').getByRole('button', {name:'Authorize',exact:true}).click();
               await page.locator('.modal-ux').getByRole('button', {name:'Close',exact:true}).last().click();
               const op = page.locator('.opblock-get').filter({has:page.locator('.opblock-summary-path[data-path="/api/inscricoes"]')});
-              await op.locator('.opblock-summary').click();
+              await op.locator('.opblock-summary-control').click();
               await op.getByRole('button', {name:'Try it out'}).click();
               const swagger = page.waitForResponse(r => r.url()===api+'/inscricoes' && r.request().method()==='GET');
               await op.getByRole('button', {name:'Execute'}).click();
