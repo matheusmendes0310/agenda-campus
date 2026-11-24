@@ -1,0 +1,169 @@
+name: Verificação de integração
+on:
+  push:
+    branches: [verificacao-integracao]
+permissions:
+  contents: read
+jobs:
+  agenda-campus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agenda_campus
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 4s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Compilar e iniciar a API
+        run: |
+          mvn -B -f backend/pom.xml -DskipTests package
+          cat > "$RUNNER_TEMP/start-campus" <<'SH'
+          #!/usr/bin/env bash
+          nohup java -jar backend/target/agenda-campus-1.0.0.jar > "$RUNNER_TEMP/agenda-api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/agenda-api.pid"
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8080/v3/api-docs >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/agenda-api.log"
+          exit 1
+          SH
+          bash "$RUNNER_TEMP/start-campus"
+      - name: Coleção Postman no PostgreSQL
+        run: npx --yes newman run postman/Agenda-Campus.postman_collection.json
+      - name: Confirmar persistência após reiniciar
+        if: ${{ !cancelled() && hashFiles('backend/target/agenda-campus-1.0.0.jar') != '' }}
+        run: |
+          api=http://localhost:8080/api
+          login() {
+            curl -fsS "$api/auth/login" -H 'Content-Type: application/json' -d '{"login":"admin","senha":"admin123"}' | jq -er .token
+          }
+          token=$(login)
+          auth=(-H "Authorization: Bearer $token" -H 'Content-Type: application/json')
+          data=$(date -u -d '+10 days' +%F)
+          evento=$(curl -fsS "$api/eventos" "${auth[@]}" -d "{\"nome\":\"Persistencia QA\",\"data\":\"$data\",\"local\":\"Lab\",\"vagas\":2}" | jq -er .id)
+          pessoa=$(curl -fsS "$api/participantes" "${auth[@]}" -d '{"nome":"Pessoa Persistencia","email":"persistencia@example.org"}' | jq -er .id)
+          inscricao=$(curl -fsS "$api/inscricoes" "${auth[@]}" -d "{\"eventoId\":$evento,\"participanteId\":$pessoa}" | jq -er .id)
+          kill "$(cat "$RUNNER_TEMP/agenda-api.pid")"
+          for i in {1..30}; do
+            if ! curl -fsS http://localhost:8080/v3/api-docs >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          bash "$RUNNER_TEMP/start-campus"
+          token=$(login)
+          curl -fsS "$api/inscricoes/$inscricao" -H "Authorization: Bearer $token" | jq -e --argjson id "$inscricao" --argjson e "$evento" --argjson p "$pessoa" '.id == $id and .eventoId == $e and .participanteId == $p'
+          curl -fsS -X DELETE "$api/inscricoes/$inscricao" -H "Authorization: Bearer $token"
+          echo 'PASS mesma inscrição após o reinício da API'
+      - name: Instalar Angular e navegador
+        if: ${{ !cancelled() && hashFiles('backend/target/agenda-campus-1.0.0.jar') != '' }}
+        working-directory: frontend
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false @playwright/test
+          npx playwright install --with-deps chromium
+          npm start > "$RUNNER_TEMP/agenda-ui.log" 2>&1 &
+          for i in {1..60}; do
+            if curl -fsS http://localhost:4200/ >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/agenda-ui.log"
+          exit 1
+      - name: Swagger Authorize e fluxo Angular
+        if: ${{ !cancelled() && hashFiles('frontend/node_modules/@playwright/test/package.json') != '' }}
+        working-directory: frontend
+        run: |
+          cat > qa-campus.cjs <<'JS'
+          const { chromium, expect } = require('@playwright/test');
+          (async () => {
+            const browser = await chromium.launch();
+            try {
+              const page = await browser.newPage();
+              const base = 'http://localhost:4200';
+              const api = 'http://localhost:8080/api';
+              const login = async (user, pass) => {
+                await page.locator('#login').fill(user);
+                await page.locator('#senha').fill(pass);
+                await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+              };
+              await page.goto(base + '/inscricoes');
+              await expect(page).toHaveURL(/\/login$/);
+          
+              // Validate Swagger UI authorization via its real API client.
+              const auth = await page.request.post(api + '/auth/login', {data:{login:'admin',senha:'admin123'}});
+              expect(auth.status()).toBe(200);
+              const {token} = await auth.json();
+              await page.goto('http://localhost:8080/swagger-ui.html');
+              await page.getByRole('button', { name: 'Authorize', exact: true }).first().click();
+              await page.locator('.auth-container input').fill(token);
+              await page.locator('.modal-ux').getByRole('button', {name:'Authorize',exact:true}).click();
+              await page.locator('.modal-ux').getByRole('button', {name:'Close',exact:true}).last().click();
+              const op = page.locator('.opblock-get').filter({has:page.locator('.opblock-summary-path[data-path="/api/inscricoes"]')});
+              await op.locator('.opblock-summary').click();
+              await op.getByRole('button', {name:'Try it out'}).click();
+              const swagger = page.waitForResponse(r => r.url()===api+'/inscricoes' && r.request().method()==='GET');
+              await op.getByRole('button', {name:'Execute'}).click();
+              const response = await swagger;
+              expect(response.status()).toBe(200);
+              expect(response.request().headers().authorization).toBe('Bearer '+token);
+              console.log('PASS Swagger Authorize + GET protegido');
+          
+              await page.goto(base + '/inscricoes');
+              await login('admin','errada');
+              await expect(page.getByRole('alert')).toContainText('Usuário ou senha incorretos.');
+              await login('admin','admin123');
+              await expect(page).toHaveURL(/\/inscricoes$/);
+              await page.getByRole('link', {name:/Nova inscrição/}).click();
+              await expect(page.locator('#evento option').filter({hasText:'Hackathon UNIPAR'})).toBeDisabled();
+              await page.locator('#evento').selectOption({label:await page.locator('#evento option').filter({hasText:'Oficina de Angular'}).textContent().then(s=>s.trim())});
+              await page.locator('#participante').selectOption({label:await page.locator('#participante option').filter({hasText:'Diego Rocha'}).textContent().then(s=>s.trim())});
+              await page.getByRole('button', {name:'Cadastrar inscrição'}).click();
+              await expect(page.getByRole('heading',{name:'Diego Rocha'})).toBeVisible();
+              await page.getByRole('link',{name:'Editar',exact:true}).click();
+              const oficina = page.locator('#evento option').filter({hasText:'Oficina de Spring Boot'});
+              await page.locator('#evento').selectOption({label:(await oficina.textContent()).trim()});
+              await page.getByRole('button',{name:'Salvar alterações'}).click();
+              await expect(page.getByText('Oficina de Spring Boot',{exact:true})).toBeVisible();
+              await page.getByRole('button',{name:'Excluir',exact:true}).click();
+              await page.getByRole('button',{name:'Sim, excluir'}).click();
+              await expect(page).toHaveURL(/\/inscricoes$/);
+              await expect(page.getByText('Inscrição excluída com sucesso.')).toBeVisible();
+          
+              await page.getByRole('link',{name:'Eventos',exact:true}).click();
+              const eventList = await (await page.request.get(api+'/eventos?nome=Angular',{headers:{Authorization:'Bearer '+token}})).json();
+              await page.locator('#filtro-nome').fill('Oficina');
+              await page.locator('#filtro-data').fill(eventList[0].data);
+              const query = page.waitForResponse(r=>r.url().startsWith(api+'/eventos?')&&r.url().includes('nome=Oficina')&&r.url().includes('data='));
+              await page.getByRole('button',{name:'Buscar',exact:true}).click();
+              expect((await query).status()).toBe(200);
+              await expect(page.getByRole('link',{name:/Ver participantes/})).toHaveCount(1);
+              const participants = page.waitForResponse(r=>r.url().endsWith('/eventos/'+eventList[0].id+'/participantes'));
+              await page.getByRole('link',{name:/Ver participantes/}).click();
+              expect((await participants).status()).toBe(200);
+              await expect(page.getByText('Ana Souza',{exact:true})).toBeVisible();
+              await page.getByRole('button',{name:'Sair',exact:true}).click();
+              await expect(page).toHaveURL(/\/login$/);
+              await login('comum','comum123');
+              await expect(page).toHaveURL(/\/inscricoes$/);
+              await expect(page.getByRole('link',{name:/Nova inscrição/})).toHaveCount(0);
+              console.log('PASS Angular login, lotacao, CRUD, filtros, logout e perfil comum');
+            } finally { await browser.close(); }
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
+          node qa-campus.cjs
+      - name: Diagnóstico em caso de falha
+        if: failure()
+        run: |
+          tail -80 "$RUNNER_TEMP/agenda-api.log" || true
+          tail -40 "$RUNNER_TEMP/agenda-ui.log" || true
