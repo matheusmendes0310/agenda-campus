@@ -173,8 +173,3 @@ cd frontend
 npm test -- --watch=false
 ```
 
-## Apresentação
-
-O roteiro do vídeo (até 5 minutos) está em [ROTEIRO.md](ROTEIRO.md).
-
-Antes de gravar, confira no PostgreSQL se uma inscrição nova continua disponível após reiniciar a API. Faça login novamente após o reinício e consulte o mesmo ID. Apague a inscrição de teste depois da conferência.
